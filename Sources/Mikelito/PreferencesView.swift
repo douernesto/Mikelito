@@ -1,3 +1,4 @@
+import ApplicationServices
 import ServiceManagement
 import SwiftUI
 
@@ -50,10 +51,23 @@ struct PreferencesView: View {
     @State private var quitMinutes = 0
     @State private var launchAtLogin = false
     @AppStorage(Prefs.moveWhenLockedKey) private var moveWhenLocked = false
+    @State private var accessibilityGranted = AXIsProcessTrusted()
 
     var body: some View {
         Form {
             Section {
+                LabeledContent("Accessibility access") {
+                    if accessibilityGranted {
+                        Label("Granted", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                    } else {
+                        HStack(spacing: 8) {
+                            Label("Not granted", systemImage: "xmark.circle.fill").foregroundStyle(.red)
+                            Button("Open Settings") {
+                                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+                            }
+                        }
+                    }
+                }
                 Toggle("Launch at login", isOn: $launchAtLogin)
             } header: {
                 Text("General")
@@ -116,6 +130,9 @@ struct PreferencesView: View {
             quitSeconds = min(max(quitSeconds, Prefs.quitRange.lowerBound), Prefs.quitRange.upperBound)
             quitHours = quitSeconds / 3600
             quitMinutes = quitSeconds % 3600 / 60
+        }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
+            accessibilityGranted = AXIsProcessTrusted()
         }
         .onChange(of: launchAtLogin) { setLaunchAtLogin($0) }
         .onChange(of: value) { _ in commit() }
